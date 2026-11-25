@@ -254,6 +254,17 @@ describe('extractChangedSubgraph', () => {
     ).toEqual(['guess']);
   });
 
+  it('refreshes only Inertia page uses when a third file changes its resolver', () => {
+    const graph = createKnowledgeGraph();
+    graph.addNode(makeFileNode('show', 'OrderController.php', 'Method'));
+    graph.addNode(makeFileNode('page', 'Pages/Orders/Show.vue', 'File'));
+    graph.addRelationship(makeRel('render', 'show', 'page', 'USES', 'laravel-inertia-render'));
+    graph.addRelationship(makeRel('ordinary', 'show', 'page', 'USES', 'other'));
+
+    const subgraph = extractChangedSubgraph(graph, new Set(['app.ts']));
+    expect(subgraph.relationships.map((r) => r.id)).toEqual(['render']);
+  });
+
   it('always includes INJECTS edges even between two unchanged files (#2200)', () => {
     // A DI consumer→implementer INJECTS edge whose endpoints (consumer.java,
     // impl.java) are both unchanged, but the interface (or a sibling

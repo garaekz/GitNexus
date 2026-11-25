@@ -133,6 +133,7 @@ import {
   type FetchWrapperContext,
 } from '../route-extractors/fetch-wrapper.js';
 import { extractFrameworkRouteFacts } from '../route-extractors/framework-route-facts.js';
+import { captureInertiaBootstrap } from '../route-extractors/laravel-inertia-resolver.js';
 import { resolveProjectFrameworkRouteFacts } from '../route-extractors/framework-route-paths.js';
 import { extractTrpcRoutes, shouldScanForTrpcRoutes } from '../route-extractors/trpc.js';
 import { extractConvexEndpointProperties } from './typescript/convex-endpoint-metadata.js';
@@ -461,13 +462,16 @@ function httpContext(
   return context;
 }
 const httpExtraction = {
-  extractRouteFacts: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) =>
-    extractFrameworkRouteFacts(
+  extractRouteFacts: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) => {
+    const facts = extractFrameworkRouteFacts(
       tree,
       parsedFile,
       lineOffset,
       httpContext(tree, parsedFile, lineOffset).bindings,
-    ),
+    );
+    const directory = captureInertiaBootstrap(parsedFile, tree);
+    return directory === undefined ? facts : { ...facts, inertiaPagesDirectory: directory };
+  },
   extractFetchWrapperCalls: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) =>
     httpContext(tree, parsedFile, lineOffset).calls(),
   extractFetchWrapperReexports: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) =>

@@ -191,6 +191,15 @@ converging on the routes phase's `(method, url)` registry:
 | AST-level route in a normal file | `extractDecoratorRoutes` | Spring, FastAPI, NestJS (`@Controller` + `@Get`/`@Post`/…; URLs are controller-relative — `setGlobalPrefix` and URI versioning live in the bootstrap file and are not applied), **JS/TS dispatch guards and static data route tables** |
 | Cross-file AST route facts | `extractRouteFacts` + `resolveRouteFacts` | Express apps/routers and their mount paths; directly proven Hono registrations |
 
+For Laravel with Inertia Vue, a resolved route handler in `app/Http/Controllers/`
+can also have a `USES` edge to a page `File`, with reason `laravel-inertia-render`.
+The workers capture a literal `Inertia::render('Orders/Show')` under the explicit
+`use Inertia\Inertia;` import and the resolver in `resources/js/app.js` or `app.ts`.
+The supported resolver calls the imported Laravel `resolvePageComponent` helper
+with a name template and a matching recursive Vue glob in `createInertiaApp`.
+Handler resolution joins those facts by exact indexed path. Ambiguous bootstraps,
+dynamic page names and missing files produce no edge.
+
 The AST-level route hook is the one whose name undersells it. A route is DECLARED by a
 decorator, but it can also be **inferred** from a raw `node:http` server's own
 dispatch — `if (req.method === 'GET' && pathname === '/api/x')` is a route with

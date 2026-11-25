@@ -51,6 +51,9 @@ export const isHeuristicEdgeReason = (reason: string): boolean =>
  */
 export const MODULE_MEMBERSHIP_REASON = 'module-membership';
 
+/** A handler's USES edge to the page selected by a separate Inertia bootstrap. */
+export const INERTIA_PAGE_REASON = 'laravel-inertia-render';
+
 /** Persisted IMPORTS reason values shared by emitters and initialization-cycle checks. */
 export const DOCUMENTATION_LINK_REASON = 'markdown-link';
 export const DEFERRED_IMPORT_REASON_SUFFIX = ' (deferred)';

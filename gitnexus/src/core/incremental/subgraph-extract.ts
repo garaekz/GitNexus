@@ -51,7 +51,7 @@
 
 import type { GraphNode, GraphRelationship } from 'gitnexus-shared';
 import { createKnowledgeGraph } from '../graph/graph.js';
-import { GLOBAL_NAME_FALLBACK_REASON } from '../graph/edge-reasons.js';
+import { GLOBAL_NAME_FALLBACK_REASON, INERTIA_PAGE_REASON } from '../graph/edge-reasons.js';
 import type { KnowledgeGraph } from '../graph/types.js';
 import {
   isSpringAutoConfigurationDeclaration,
@@ -123,6 +123,8 @@ export const isGraphWideNode = (node: GraphNode): boolean =>
 export const isGraphWideRelationship = (relationship: GraphRelationship): boolean =>
   // Adding or removing a third definition changes workspace-wide name uniqueness.
   (relationship.type === 'CALLS' && relationship.reason === GLOBAL_NAME_FALLBACK_REASON) ||
+  // Editing the page resolver alone can change an edge between two unchanged files.
+  (relationship.type === 'USES' && relationship.reason === INERTIA_PAGE_REASON) ||
   relationship.type === 'TAINT_PATH' ||
   relationship.type === 'CALL_SUMMARY' ||
   relationship.type === 'INJECTS' ||

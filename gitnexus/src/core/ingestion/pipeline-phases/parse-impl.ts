@@ -73,6 +73,7 @@ import {
   getProviderForFile,
   needsContentLanguageClassification,
   providers,
+  routeHandlerFileLinkers,
 } from '../languages/index.js';
 import { classifyContentLanguages } from '../content-language-classification.js';
 import { SCOPE_RESOLVERS } from '../scope-resolution/pipeline/registry.js';
@@ -1972,6 +1973,9 @@ export async function runChunkedParseAndResolve(
     },
     selectedRoutes,
   );
+  for (const link of routeHandlerFileLinkers) {
+    link(graph, model, routeFilePaths, allRouteFacts, routeHandlerSymbols);
+  }
   return {
     exportedTypeMap,
     allFetchCalls,

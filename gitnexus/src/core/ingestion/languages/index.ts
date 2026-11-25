@@ -32,6 +32,10 @@ import { vueProvider } from './vue.js';
 import { rProvider } from './r.js';
 import { cobolProvider } from './cobol.js';
 import { zigProvider } from './zig.js';
+import { linkInertiaPages } from '../route-extractors/laravel-inertia-pages.js';
+
+/** Cross-language frameworks that join worker route facts to resolved handlers. */
+export const routeHandlerFileLinkers = [linkInertiaPages];
 
 export const providers = {
   [SupportedLanguages.JavaScript]: javascriptProvider,

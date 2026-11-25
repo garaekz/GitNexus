@@ -287,6 +287,8 @@ withTestLbugDB(
             ['CALLS', 'test-bound-call'],
             ['INJECTS', 'test-binding'],
             ['ADVISED_BY', 'test-binding'],
+            ['USES', 'laravel-inertia-render'],
+            ['USES', 'test-binding'],
           ]) {
             await executeQuery(
               `MATCH (a:Function {id: '${a.id}'}), (b:Function {id: '${b.id}'}) ` +
@@ -298,11 +300,16 @@ withTestLbugDB(
           expect(before).not.toContainEqual(
             expect.objectContaining({ reason: 'global-name-fallback' }),
           );
-          await expect(deleteGlobalResolutionEdges()).resolves.toEqual({ edgesDeleted: 3 });
+          await expect(deleteGlobalResolutionEdges()).resolves.toEqual({ edgesDeleted: 4 });
+          expect(
+            await executeQuery(
+              "MATCH ()-[r:CodeRelation]->() WHERE r.type = 'USES' RETURN r.reason AS reason",
+            ),
+          ).toEqual([{ reason: 'test-binding' }]);
           expect(await executeQuery(calls + reasons)).toEqual(before);
         } finally {
           await executeQuery(
-            "MATCH ()-[r:CodeRelation]->() WHERE r.reason IN ['global-name-fallback', 'test-bound-call', 'test-binding'] DELETE r",
+            "MATCH ()-[r:CodeRelation]->() WHERE r.reason IN ['global-name-fallback', 'test-bound-call', 'test-binding', 'laravel-inertia-render'] DELETE r",
           );
         }
         expect(await executeQuery(calls + reasons)).toEqual(baseline);

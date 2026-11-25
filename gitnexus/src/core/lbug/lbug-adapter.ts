@@ -10,7 +10,11 @@ import { closeQueryResults } from './query-result-utils.js';
 import { chunk } from '../../lib/utils.js';
 import { warnIfQueryTextUnbounded } from './query-batch.js';
 import { escapeCypherString } from './cypher-escape.js';
-import { GLOBAL_NAME_FALLBACK_REASON, MODULE_MEMBERSHIP_REASON } from '../graph/edge-reasons.js';
+import {
+  GLOBAL_NAME_FALLBACK_REASON,
+  INERTIA_PAGE_REASON,
+  MODULE_MEMBERSHIP_REASON,
+} from '../graph/edge-reasons.js';
 import { withConnLock } from './conn-lock.js';
 import { isWalDriverActive } from './wal-driver-state.js';
 import { KnowledgeGraph } from '../graph/types.js';
@@ -3663,7 +3667,8 @@ export const deleteSpringAutoConfigurationDeclarations = async (): Promise<{
 /** These edge sets are always recomputed together. Scan CodeRelation once. */
 export const deleteGlobalResolutionEdges = () =>
   deleteRelationshipsWhere(
-    `r.type IN ['INJECTS', 'ADVISED_BY'] OR (r.type = 'CALLS' AND r.reason = '${GLOBAL_NAME_FALLBACK_REASON}')`,
+    `r.type IN ['INJECTS', 'ADVISED_BY'] OR (r.type = 'CALLS' AND r.reason = '${GLOBAL_NAME_FALLBACK_REASON}') ` +
+      `OR (r.type = 'USES' AND r.reason = '${INERTIA_PAGE_REASON}')`,
     'global resolution',
     'incremental',
     'duplicate resolution edges',

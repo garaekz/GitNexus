@@ -20,6 +20,7 @@ import {
 
 import { SupportedLanguages } from 'gitnexus-shared';
 import { phpRenameProvider } from './php/rename.js';
+import { extractInertiaControllerFacts } from '../route-extractors/laravel-inertia-pages.js';
 import { createClassExtractor } from '../class-extractors/generic.js';
 import { phpClassConfig } from '../class-extractors/configs/php.js';
 import { createPhpCfgVisitor } from '../cfg/visitors/php.js';
@@ -314,6 +315,7 @@ export const phpProvider = defineLanguage({
   classExtractor: createClassExtractor(phpClassConfig),
   descriptionExtractor: phpDescriptionExtractor,
   isRouteFile: isPhpRouteFile,
+  extractRouteFacts: extractInertiaControllerFacts,
   builtInNames: BUILT_INS,
   // ── RFC #909 Ring 3: scope-based resolution hooks ──────────────────────
   emitScopeCaptures: emitPhpScopeCaptures,
