@@ -3,6 +3,10 @@ on:
   push:
     branches: ['ci/inertia-2f03ce7d9']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
