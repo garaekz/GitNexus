@@ -29,8 +29,18 @@ describe('Laravel Inertia render calls', () => {
         return Inertia::render('Orders/Show', ['order' => $page]);`,
     );
     expect(extract(source)).toEqual([
-      { methodName: 'show', callLine: 6, page: 'Orders/New' },
-      { methodName: 'show', callLine: 8, page: 'Orders/Show' },
+      {
+        controllerQualifiedName: 'App.Http.Controllers.OrderController',
+        methodName: 'show',
+        callLine: 6,
+        page: 'Orders/New',
+      },
+      {
+        controllerQualifiedName: 'App.Http.Controllers.OrderController',
+        methodName: 'show',
+        callLine: 8,
+        page: 'Orders/Show',
+      },
     ]);
   });
 

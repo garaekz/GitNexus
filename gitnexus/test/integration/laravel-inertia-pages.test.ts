@@ -78,7 +78,9 @@ it('follows the route through its controller to the configured Vue file across r
       'routes/web.php': String.raw`<?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\InheritedController;
 Route::get('/orders', [OrderController::class, 'show']);
+Route::get('/inherited', [InheritedController::class, 'show']);
 Route::get('/dynamic', [OrderController::class, 'dynamic']);
 Route::get('/missing', [OrderController::class, 'missing']);
 Route::get('/wrong-case', [OrderController::class, 'wrongCase']);
@@ -86,6 +88,15 @@ Route::get('/ignored', [OrderController::class, 'ignored']);`,
       [entry]: resolver('Pages'),
       'resources/js/ignored.ts': resolver('Screens'),
       [controller]: handler("Inertia::render('Orders/Show', ['order' => 1])"),
+      'app/Http/Controllers/ParentController.php': String.raw`<?php
+namespace App\Http\Controllers;
+class ParentController { public function show() { return null; } }`,
+      'app/Http/Controllers/InheritedController.php': String.raw`<?php
+namespace App\Http\Controllers;
+use Inertia\Inertia;
+class InheritedController extends ParentController {}
+class Unrelated { public function show() { return Inertia::render('Private/Show'); } }`,
+      'resources/js/Pages/Private/Show.vue': vue,
       'resources/js/Pages/Orders/Show.vue': vue,
       'resources/js/Pages/Orders/Hidden.vue': vue,
       'resources/js/Screens/Orders/Show.vue': vue,
@@ -109,6 +120,14 @@ Route::get('/ignored', [OrderController::class, 'ignored']);`,
     );
     expect(walk.row_count, walk.markdown).toBe(1);
     expect(walk.markdown).toContain('| /orders | show | resources/js/Pages/Orders/Show.vue |');
+    // The inherited handler is implemented elsewhere. A same-file method on another
+    // class cannot supply the render, even when its page and the route both exist.
+    expect(query("MATCH (r:Route {name: '/inherited'}) RETURN r.name AS route").row_count).toBe(1);
+    const unrelated = query(
+      `MATCH (m:Method)-[u:CodeRelation]->(p:File {filePath: 'resources/js/Pages/Private/Show.vue'}) ` +
+        `WHERE ${usesPage} RETURN m.name AS handler`,
+    );
+    expect(unrelated.row_count, unrelated.markdown).toBe(0);
     expectPage('resources/js/Pages/Orders/Show.vue');
 
     // Only the resolver changes. Both files still exist and the controller is untouched.
@@ -153,6 +172,37 @@ Route::get('/ignored', [OrderController::class, 'ignored']);`,
       query("MATCH (f:File {filePath: 'resources/js/ignored.ts'}) RETURN f.name AS name").row_count,
     ).toBe(0);
     expect(query(endpoints)).toMatchObject({ row_count: 0 });
+
+    const routes = path.join(repo, 'routes/web.php');
+    const routePages = () =>
+      query(
+        `MATCH (r:Route)<-[h:CodeRelation]-(m:Method)-[u:CodeRelation]->(p:File) ` +
+          `WHERE h.type = 'HANDLES_ROUTE' AND ${usesPage} ` +
+          'RETURN r.name AS route, p.filePath AS page ORDER BY route',
+      );
+    fs.writeFileSync(path.join(repo, entry), resolver('Pages'));
+    fs.appendFileSync(
+      routes,
+      String.raw`
+Route::get('/private', [\App\Http\Controllers\Unrelated::class, 'show']);`,
+    );
+    analyze();
+    const valid = routePages();
+    expect(valid.row_count, valid.markdown).toBe(2);
+    expect(valid.markdown).toContain('| /orders | resources/js/Pages/Orders/Show.vue |');
+    expect(valid.markdown).toContain('| /private | resources/js/Pages/Private/Show.vue |');
+
+    // A second FQN with the same short name can reach the legacy handler fallback.
+    // A method-level USES edge would also give that unrelated route the private page.
+    fs.appendFileSync(
+      routes,
+      String.raw`
+Route::get('/conflicting', [\UnrelatedVendor\Unrelated::class, 'show']);`,
+    );
+    analyze();
+    const conflicting = routePages();
+    expect(conflicting.row_count, conflicting.markdown).toBe(1);
+    expect(conflicting.markdown).toContain('| /orders | resources/js/Pages/Orders/Show.vue |');
   } finally {
     cleanupTempDirSync(root);
   }

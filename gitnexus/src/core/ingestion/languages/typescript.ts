@@ -133,7 +133,9 @@ import {
   type FetchWrapperContext,
 } from '../route-extractors/fetch-wrapper.js';
 import { extractFrameworkRouteFacts } from '../route-extractors/framework-route-facts.js';
+import { captureInertiaClientCalls } from '../route-extractors/laravel-inertia-clients.js';
 import { captureInertiaBootstrap } from '../route-extractors/laravel-inertia-resolver.js';
+import { captureInertiaViteEntry } from '../route-extractors/laravel-inertia-vite.js';
 import { resolveProjectFrameworkRouteFacts } from '../route-extractors/framework-route-paths.js';
 import { extractTrpcRoutes, shouldScanForTrpcRoutes } from '../route-extractors/trpc.js';
 import { extractConvexEndpointProperties } from './typescript/convex-endpoint-metadata.js';
@@ -463,14 +465,15 @@ function httpContext(
 }
 const httpExtraction = {
   extractRouteFacts: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) => {
-    const facts = extractFrameworkRouteFacts(
-      tree,
-      parsedFile,
-      lineOffset,
-      httpContext(tree, parsedFile, lineOffset).bindings,
-    );
-    const directory = captureInertiaBootstrap(parsedFile, tree);
-    return directory === undefined ? facts : { ...facts, inertiaPagesDirectory: directory };
+    const context = httpContext(tree, parsedFile, lineOffset);
+    const facts = extractFrameworkRouteFacts(tree, parsedFile, lineOffset, context.bindings);
+    const bootstrap = captureInertiaBootstrap(parsedFile, tree, context.bindings);
+    const calls = captureInertiaClientCalls(facts, context, parsedFile);
+    const viteConfig = captureInertiaViteEntry(parsedFile, tree);
+    if (bootstrap !== undefined) Object.assign(facts, { inertiaBootstrap: bootstrap });
+    if (calls.length) Object.assign(facts, { inertiaClientCalls: calls });
+    if (viteConfig) Object.assign(facts, { inertiaViteConfig: viteConfig });
+    return facts;
   },
   extractFetchWrapperCalls: (tree: Parser.Tree, parsedFile: ParsedFile, lineOffset: number) =>
     httpContext(tree, parsedFile, lineOffset).calls(),

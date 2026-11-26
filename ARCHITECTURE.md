@@ -195,10 +195,16 @@ For Laravel with Inertia Vue, a resolved route handler in `app/Http/Controllers/
 can also have a `USES` edge to a page `File`, with reason `laravel-inertia-render`.
 The workers capture a literal `Inertia::render('Orders/Show')` under the explicit
 `use Inertia\Inertia;` import and the resolver in `resources/js/app.js` or `app.ts`.
-The supported resolver calls the imported Laravel `resolvePageComponent` helper
-with a name template and a matching recursive Vue glob in `createInertiaApp`.
-Handler resolution joins those facts by exact indexed path. Ambiguous bootstraps,
-dynamic page names and missing files produce no edge.
+An explicit resolver calls the imported Laravel `resolvePageComponent` helper
+with a name template and a matching recursive Vue glob. The Breeze server entry
+may repeat that map inside the Vue adapter's `createServer` callback. Imported
+factory calls, including those reached through re-exports, identify competing clients.
+For the Vue starter's `void createInertiaApp({...})`, the root Vite configuration
+must register the default Inertia plugin and select that browser input. Its Vue
+resolver looks for `./pages/<name>.vue` before `./Pages/<name>.vue`.
+After route selection, the linker checks the declaring PHP class against the routed
+controller and joins the method to the exact indexed page. Unproven configurations,
+ambiguous clients, dynamic page names and missing files produce no edge.
 
 The AST-level route hook is the one whose name undersells it. A route is DECLARED by a
 decorator, but it can also be **inferred** from a raw `node:http` server's own

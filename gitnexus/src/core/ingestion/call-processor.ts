@@ -375,10 +375,10 @@ export const processRoutesFromExtracted = async (
  * `HttpRouteExtractor.extractProvidersGraph` read the handler symbol from the
  * graph instead of re-parsing source via `getDetections()`.
  *
- * Two route shapes, one resolution target — `(filePath, name) → nodeId`:
+ * Handler identity depends on how the route was declared:
  *   - Laravel framework routes (`ExtractedRoute`) carry `controllerName` +
- *     `methodName`; resolve the controller (qualified-first) then the method in
- *     the controller's own file (mirrors `processRoutesFromExtracted`).
+ *     `methodName`; resolve the controller (qualified-first), then look up the
+ *     method by that controller's node ID.
  *   - Decorator routes (`ExtractedDecoratorRoute`, e.g. Spring/FastAPI) carry
  *     `handlerName` (the decorated method, captured at extraction); resolve it
  *     directly in the route's own file.
@@ -536,7 +536,13 @@ export function resolveRouteHandlerSymbols(
         const controllerDefs = model.types.lookupClassByName(route.controllerName);
         if (controllerDefs.length === 1) controllerDef = controllerDefs[0];
       }
-      if (controllerDef) methodId = uniqueSymbolId(controllerDef.filePath, route.methodName);
+      if (controllerDef) {
+        // Another class in the same file can declare the requested name while
+        // the controller inherits it. Only stamp a method owned by this class.
+        methodId = uniqueById(
+          model.methods.lookupAllByOwner(controllerDef.nodeId, route.methodName),
+        )?.nodeId;
+      }
     } else if (!route.controllerName && route.methodName) {
       methodId = pickSameFileHandler(
         model.symbols.lookupExactAll(route.filePath, route.methodName),

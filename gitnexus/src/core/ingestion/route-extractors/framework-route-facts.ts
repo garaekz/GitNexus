@@ -1,6 +1,7 @@
 import type Parser from 'tree-sitter';
 import type { ParsedFile, ParsedImport } from 'gitnexus-shared';
 import { plainString } from './data-route-table.js';
+import { decodeIdentifierEscapes } from '../utils/ecmascript-literals.js';
 import { unboundCallableName } from '../languages/typescript/unbound-callables.js';
 import type { FrameworkExpression, FrameworkRouteFacts } from './framework-route-types.js';
 import {
@@ -39,6 +40,16 @@ const METHODS = new Set(['get', 'post', 'put', 'delete', 'patch', 'all', 'route'
 const children = (node: Node | null | undefined): Node[] =>
   node?.namedChildren.filter((child) => child.type !== 'comment') ?? [];
 const args = (node: Node): Node[] => children(node.childForFieldName('arguments'));
+
+/** Dot and literal-subscript access designate the same property. */
+export function staticMemberName(node: Node): string | null {
+  if (node.type === 'member_expression') {
+    const name = node.childForFieldName('property');
+    return name?.type === 'property_identifier' ? decodeIdentifierEscapes(name.text) : null;
+  }
+  const index = node.type === 'subscript_expression' && node.childForFieldName('index');
+  return index ? plainString(index) : null;
+}
 
 function literalPaths(node: Node | undefined): string[] | null {
   if (!node) return null;
@@ -137,13 +148,13 @@ export function extractFrameworkRouteFacts(
       value = expression(transparentInner(node), depth + 1);
     } else if (FUNCTION_TYPES.includes(node.type)) {
       value = HANDLER;
-    } else if (node.type === 'member_expression') {
-      const name = node.childForFieldName('property');
-      if (name?.type === 'property_identifier')
+    } else if (node.type === 'member_expression' || node.type === 'subscript_expression') {
+      const name = staticMemberName(node);
+      if (name !== null)
         value = {
           kind: 'member',
           object: expression(node.childForFieldName('object'), depth + 1),
-          name: name.text,
+          name,
         };
     } else if (node.type === 'call_expression' || node.type === 'new_expression') {
       const callee = node.childForFieldName(

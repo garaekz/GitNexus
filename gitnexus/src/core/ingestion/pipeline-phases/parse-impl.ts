@@ -1974,7 +1974,11 @@ export async function runChunkedParseAndResolve(
     selectedRoutes,
   );
   for (const link of routeHandlerFileLinkers) {
-    link(graph, model, routeFilePaths, allRouteFacts, routeHandlerSymbols);
+    await link(graph, model, routeFilePaths, allRouteFacts, routeHandlerSymbols, {
+      selectedRoutes,
+      resolveImportTargets: resolveRouteModuleTargets,
+      repoPath,
+    });
   }
   return {
     exportedTypeMap,

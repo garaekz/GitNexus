@@ -69,6 +69,7 @@ export interface FetchWrapperReexport {
 }
 export interface FetchWrapperContext {
   bindings: LexicalBindings;
+  readonly callNodes: readonly Node[];
   facts(definition: Node, nameNode?: Node): FetchWrapperFacts | undefined;
   calls(): FetchWrapperCall[];
   reexports(): FetchWrapperReexport[];
@@ -896,6 +897,7 @@ export function createFetchWrapperContext(
   };
   return {
     bindings,
+    callNodes: allCalls,
     facts,
     reexports: () => {
       const result: FetchWrapperReexport[] = [];

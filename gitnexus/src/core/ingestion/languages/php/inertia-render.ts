@@ -1,7 +1,9 @@
 import type Parser from 'tree-sitter';
+import { normalizeQualifiedName } from '../../utils/qualified-name.js';
 import { splitNamespaceUseDeclaration } from './import-decomposer.js';
 
 interface InertiaRender {
+  controllerQualifiedName: string;
   methodName: string;
   /** Zero-based row, matching the Method nodes produced by ingestion. */
   callLine: number;
@@ -61,6 +63,7 @@ export function extractInertiaRenders(tree: Parser.Tree): InertiaRender[] {
   // Controller files conventionally have one unbracketed namespace or no namespace.
   if (namespaces.length > 1 || namespaces[0]?.childForFieldName('body')) return [];
   const namespaceStart = namespaces[0]?.endIndex ?? 0;
+  const namespace = namespaces[0]?.childForFieldName('name')?.text;
   const renders: InertiaRender[] = [];
   let facadeImported = false;
   for (const statement of statements) {
@@ -83,13 +86,25 @@ export function extractInertiaRenders(tree: Parser.Tree): InertiaRender[] {
         facadeImported = true;
       }
     } else if (statement.type === 'class_declaration' && facadeImported) {
+      const className = statement.childForFieldName('name')?.text;
+      if (!className) continue;
+      const controllerQualifiedName = namespace
+        ? normalizeQualifiedName(`${namespace}\\${className}`)
+        : className;
       for (const call of statement.descendantsOfType('scoped_call_expression')) {
         const page = literalPage(call);
         if (page === undefined) continue;
         const method = enclosingMethod(call);
         if (method?.parent?.parent?.id !== statement.id) continue;
         const methodName = method.childForFieldName('name')?.text;
-        if (methodName) renders.push({ methodName, callLine: call.startPosition.row, page });
+        if (methodName) {
+          renders.push({
+            controllerQualifiedName,
+            methodName,
+            callLine: call.startPosition.row,
+            page,
+          });
+        }
       }
     }
   }
