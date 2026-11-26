@@ -1,0 +1,13 @@
+name: Inertia fork validation
+on:
+  push:
+    branches: ['ci/inertia-2f03ce7d9']
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
